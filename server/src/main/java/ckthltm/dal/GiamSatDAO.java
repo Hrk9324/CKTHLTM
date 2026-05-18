@@ -7,6 +7,7 @@ import java.sql.*;
 import java.util.*;
 
 public class GiamSatDAO extends BaseDAO {
+
     public List<GiamSat> getAll() {
         List<GiamSat> list = new ArrayList<>();
         String sql = "SELECT * FROM giam_sat";
@@ -94,28 +95,79 @@ public class GiamSatDAO extends BaseDAO {
             return;
         }
 
-        for (PhanCongGiamSat pc : list) {
-            if (pc.getCanBo() == null) {
-                continue;
+        final String sql = "INSERT INTO giam_sat (ma_gv, phong_thi) VALUES (?, ?)";
+
+        int rowsToInsert = 0;
+
+        Connection conn = null;
+        try {
+            conn = getConnection();
+            if (conn == null) {
+                throw new SQLException("Cannot obtain DB connection");
             }
 
-            for (String phong : pc.getPhongThiList()) {
-                GiamSat gs = new GiamSat(
-                        0,
-                        pc.getCanBo().getMaGV(),
-                        phong);
+            conn.setAutoCommit(false);
 
-                insert(gs);
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                for (PhanCongGiamSat pc : list) {
+                    if (pc == null || pc.getCanBo() == null) {
+                        continue;
+                    }
+
+                    List<String> phongList = pc.getPhongThiList();
+                    if (phongList == null || phongList.isEmpty()) {
+                        continue;
+                    }
+
+                    String maGV = pc.getCanBo().getMaGV();
+                    for (String phong : phongList) {
+                        ps.setString(1, maGV);
+                        ps.setString(2, phong);
+                        ps.addBatch();
+                        rowsToInsert++;
+                    }
+                }
+
+                if (rowsToInsert == 0) {
+                    conn.commit();
+                    return;
+                }
+
+                ps.executeBatch();
+            }
+
+            conn.commit();
+
+        } catch (SQLException e) {
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    System.err.println("Rollback error: " + rollbackEx.getMessage());
+                }
+            }
+
+            System.err.println("Failed to batch insert giam_sat: " + e.getMessage());
+            throw new RuntimeException("Failed to batch insert giam_sat", e);
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    System.err.println("Failed to restore auto-commit: " + e.getMessage());
+                }
+                closeConnection(conn);
             }
         }
     }
 
     public boolean daTungGiamSatPhong(String maGV, String phongThi) {
         String sql = """
-                SELECT COUNT(*) AS total
+                SELECT 1
                 FROM giam_sat
                 WHERE ma_gv = ?
                   AND phong_thi = ?
+                LIMIT 1
                 """;
 
         try (Connection conn = getConnection();
@@ -125,9 +177,7 @@ public class GiamSatDAO extends BaseDAO {
             ps.setString(2, phongThi);
 
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt("total") > 0;
-                }
+                return rs.next();
             }
 
         } catch (SQLException e) {
@@ -146,12 +196,30 @@ public class GiamSatDAO extends BaseDAO {
             return false;
         }
 
-        for (String phongThi : phongThiList) {
-            if (daTungGiamSatPhong(maGV, phongThi)) {
+        String placeholders = String.join(",", Collections.nCopies(phongThiList.size(), "?"));
+        String sql = "SELECT 1 FROM giam_sat WHERE ma_gv = ? AND phong_thi IN (" + placeholders + ") LIMIT 1";
+
+        try (Connection conn = getConnection()) {
+            if (conn == null) {
+                System.err.println("Cannot obtain DB connection");
                 return false;
             }
-        }
 
-        return true;
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, maGV);
+                for (int i = 0; i < phongThiList.size(); i++) {
+                    ps.setString(i + 2, phongThiList.get(i));
+                }
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    boolean found = rs.next();
+                    return !found;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("SQL error in coTheGiamSatKhoi: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 }
