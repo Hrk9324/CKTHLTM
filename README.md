@@ -1343,10 +1343,3 @@ Windows:
 gradlew.bat server:run --console=plain
 gradlew.bat client:run --console=plain
 ```
-
-Hoặc PowerShell:
-
-```powershell
-.\gradlew.bat server:run --console=plain
-.\gradlew.bat client:run --console=plain
-```
