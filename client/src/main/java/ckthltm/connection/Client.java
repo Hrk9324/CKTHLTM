@@ -12,6 +12,7 @@ import java.io.IOException;
 
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -61,12 +62,19 @@ public class Client extends JFrame {
     // ── UI ─────────────────────────────────────────
     private JTextArea logArea;
 
+    private JTextField txtAddress;
+    private JTextField txtPort;
+    private JButton btnConnect;
+
     private JTextField txtN;
     private JTextField txtM;
 
     private JTextField txtSelectedFile;
 
     private File selectedFile;
+
+    private boolean connected = false;
+    private boolean connecting = false;
 
     // ───────────────────────────────────────────────
     public Client() {
@@ -75,9 +83,9 @@ public class Client extends JFrame {
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
-        setSize(950, 700);
+        setSize(950, 760);
 
-        setMinimumSize(new Dimension(850, 600));
+        setMinimumSize(new Dimension(850, 650));
 
         setLocationRelativeTo(null);
 
@@ -103,6 +111,14 @@ public class Client extends JFrame {
 
                 connectedSocket = new Socket(address, port);
 
+                connected = true;
+                connecting = false;
+
+                SwingUtilities.invokeLater(() -> {
+                    btnConnect.setText("Đã kết nối");
+                    btnConnect.setForeground(Color.WHITE);
+                });
+
                 appendLog(
                         "Đã kết nối server "
                                 + address.getHostAddress()
@@ -117,7 +133,17 @@ public class Client extends JFrame {
 
             } catch (IOException e) {
 
-                                appendLog("Không thể kết nối: "
+                connected = false;
+                connecting = false;
+
+                SwingUtilities.invokeLater(() -> {
+                    txtAddress.setEnabled(true);
+                    txtPort.setEnabled(true);
+                    btnConnect.setText("Kết nối");
+                    btnConnect.setForeground(Color.WHITE);
+                });
+
+                appendLog("Không thể kết nối: "
                         + e.getMessage());
             }
 
@@ -224,17 +250,17 @@ public class Client extends JFrame {
     // ── Center ─────────────────────────────────────
     private JPanel buildCenter() {
 
-        JPanel center = new JPanel(new GridBagLayout());
-
+        JPanel center = new JPanel();
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
         center.setBackground(BG_MAIN);
-
         center.setBorder(
                 new EmptyBorder(20, 24, 20, 24));
 
+        JPanel contentRow = new JPanel(new GridBagLayout());
+        contentRow.setOpaque(false);
+
         GridBagConstraints gbc = new GridBagConstraints();
-
         gbc.fill = GridBagConstraints.BOTH;
-
         gbc.insets = new Insets(0, 0, 0, 14);
 
         // left
@@ -242,15 +268,21 @@ public class Client extends JFrame {
         gbc.gridy = 0;
         gbc.weightx = 0.48;
         gbc.weighty = 1.0;
-
-        center.add(buildLeftPanel(), gbc);
+        contentRow.add(buildLeftPanel(), gbc);
 
         // right
         gbc.gridx = 1;
         gbc.weightx = 0.52;
         gbc.insets = new Insets(0, 0, 0, 0);
+        contentRow.add(buildLogPanel(), gbc);
 
-        center.add(buildLogPanel(), gbc);
+        JPanel connectPanel = buildConnectCard();
+        connectPanel.setMaximumSize(
+                new Dimension(Integer.MAX_VALUE, 120));
+
+        center.add(contentRow);
+        center.add(Box.createVerticalStrut(14));
+        center.add(connectPanel);
 
         return center;
     }
@@ -274,6 +306,134 @@ public class Client extends JFrame {
         panel.add(buildFileCard());
 
         return panel;
+    }
+
+    // ── Connect card ───────────────────────────────
+    private JPanel buildConnectCard() {
+
+        JPanel card = createCard();
+        card.setLayout(new BorderLayout(0, 12));
+
+        card.add(
+                sectionLabel("Kết nối server"),
+                BorderLayout.NORTH);
+
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        inputPanel.setOpaque(false);
+
+        JLabel lblAddress = new JLabel("Address");
+        lblAddress.setFont(FONT_LABEL);
+        lblAddress.setForeground(TEXT_MID);
+
+        JLabel lblPort = new JLabel("Port");
+        lblPort.setFont(FONT_LABEL);
+        lblPort.setForeground(TEXT_MID);
+
+        txtAddress = styledField("Nhập address...");
+        txtAddress.setText("localhost");
+        txtAddress.setPreferredSize(new Dimension(0, 38));
+
+        txtPort = styledField("Nhập port...");
+        txtPort.setText("8124");
+        txtPort.setPreferredSize(new Dimension(0, 38));
+
+        btnConnect = roundButton(
+                "Kết nối",
+                ACCENT_BLUE,
+                Color.WHITE);
+        btnConnect.setPreferredSize(new Dimension(135, 38));
+        btnConnect.addActionListener(e -> handleConnect());
+
+        JPanel addressWrap = new JPanel(new BorderLayout(8, 0));
+        addressWrap.setOpaque(false);
+        addressWrap.add(lblAddress, BorderLayout.WEST);
+        addressWrap.add(txtAddress, BorderLayout.CENTER);
+
+        JPanel portWrap = new JPanel(new BorderLayout(8, 0));
+        portWrap.setOpaque(false);
+        portWrap.add(lblPort, BorderLayout.WEST);
+        portWrap.add(txtPort, BorderLayout.CENTER);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        gbc.insets = new Insets(0, 0, 0, 10);
+
+        gbc.gridx = 0;
+        inputPanel.add(addressWrap, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 0.55;
+        inputPanel.add(portWrap, gbc);
+
+        gbc.gridx = 2;
+        gbc.weightx = 0;
+        gbc.insets = new Insets(0, 0, 0, 0);
+        gbc.fill = GridBagConstraints.NONE;
+        inputPanel.add(btnConnect, gbc);
+
+        card.add(inputPanel, BorderLayout.CENTER);
+
+        return card;
+    }
+
+    private void handleConnect() {
+
+        if (connected || connecting) {
+            return;
+        }
+
+        String addressText = txtAddress.getText().trim();
+        String portText = txtPort.getText().trim();
+
+        if (addressText.isEmpty()) {
+            appendLog("Cảnh báo: Vui lòng nhập address");
+            txtAddress.requestFocus();
+            return;
+        }
+
+        if (portText.isEmpty()) {
+            appendLog("Cảnh báo: Vui lòng nhập port");
+            txtPort.requestFocus();
+            return;
+        }
+
+        int port;
+        try {
+            port = Integer.parseInt(portText);
+        } catch (NumberFormatException e) {
+            appendLog("Cảnh báo: Port phải là số nguyên");
+            txtPort.requestFocus();
+            return;
+        }
+
+        if (port < 1 || port > 65535) {
+            appendLog("Cảnh báo: Port phải nằm trong khoảng 1 đến 65535");
+            txtPort.requestFocus();
+            return;
+        }
+
+        try {
+            InetAddress address = InetAddress.getByName(addressText);
+
+            connecting = true;
+
+            txtAddress.setEnabled(false);
+            txtPort.setEnabled(false);
+
+            btnConnect.setText("Đang kết nối...");
+            btnConnect.setForeground(Color.WHITE);
+
+            appendLog("Đang kết nối tới " + addressText + ":" + port);
+
+            connect(address, port);
+
+        } catch (UnknownHostException e) {
+            connecting = false;
+            appendLog("Không tìm thấy address: " + addressText);
+            txtAddress.requestFocus();
+        }
     }
 
     // ── Message card ───────────────────────────────
@@ -458,6 +618,11 @@ public class Client extends JFrame {
     // ── Send message ───────────────────────────────
     private void sendMessage() {
 
+        if (!connected || connectedSocket == null) {
+            appendLog("Cảnh báo: Chưa kết nối server");
+            return;
+        }
+
         String nStr = txtN.getText().trim();
 
         String mStr = txtM.getText().trim();
@@ -519,6 +684,11 @@ public class Client extends JFrame {
 
     // ── Send file ──────────────────────────────────
     private void sendFile() {
+
+        if (!connected || connectedSocket == null) {
+            appendLog("Cảnh báo: Chưa kết nối server");
+            return;
+        }
 
         if (selectedFile == null) {
 

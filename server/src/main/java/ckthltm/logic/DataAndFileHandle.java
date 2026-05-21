@@ -22,7 +22,7 @@ import ckthltm.models.result.PhanCongGiamThi;
 
 public class DataAndFileHandle {
 
-    private static final int MAX_GIAM_THI_PER_SHEET = 20;
+    private static final int MAX_GIAM_THI_PER_SHEET = 40;
 
     private static String buildPhanCongFileName(int caThi) {
         return "phan_cong_cathi_" + caThi + ".xlsx";
@@ -74,7 +74,6 @@ public class DataAndFileHandle {
                     "DANH SÁCH PHÂN CÔNG GIÁM THỊ COI THI (Trang " + (page + 1) + "/" + totalPages + ")",
                     "Phiên: Ca " + caThi + "  -  Ngày: " + todayDdMmYyyy());
 
-            // Tạo sẵn lưới ô cho Header (2 dòng, 0..5) để hiển thị viền đầy đủ khi merge
             Row row0 = sheet.createRow(tableHeaderStartRow);
             Row row1 = sheet.createRow(tableHeaderStartRow + 1);
             for (int i = 0; i <= 5; i++) {
