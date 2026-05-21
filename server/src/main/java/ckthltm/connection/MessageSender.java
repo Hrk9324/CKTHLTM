@@ -11,7 +11,6 @@ public class MessageSender {
 
     public void sendMessage(Socket socket, String message) {
         try {
-            System.out.println("[DEBUG] Attempting to send message: " + message);
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
             out.writeByte(0x01); // SEND STRING
@@ -19,15 +18,13 @@ public class MessageSender {
             out.writeInt(messageBytes.length);
             out.write(messageBytes);
             out.flush();
-
-            System.out.println("[DEBUG] Message sent successfully. Length: " + messageBytes.length);
         } catch (IOException e) {
-            System.err.println("[ERROR] Failed to send message: " + e.getMessage());
+            System.err.println("[SERVER] Lỗi gửi message: " + e.getMessage());
         }
     }
 
     public void sendFile(Socket socket, String filePath, String fileName) {
-        System.out.println("[DEBUG] Bắt đầu gửi file: " + fileName);
+        System.out.println("[SERVER] Gửi file kết quả: " + fileName);
         File file = new File(filePath);
 
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -54,10 +51,8 @@ public class MessageSender {
             out.writeByte(0x04);
             out.writeInt(0); // Gửi thêm 4 byte 0 để Server readInt() xong mới vào switch-case
             out.flush();
-
-            System.out.println("[DEBUG] Đã gửi xong toàn bộ file.");
         } catch (IOException e) {
-            System.err.println("[ERROR] Lỗi khi gửi file: " + e.getMessage());
+            System.err.println("[SERVER] Lỗi khi gửi file: " + e.getMessage());
         }
     }
 }

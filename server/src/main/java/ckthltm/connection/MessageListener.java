@@ -32,18 +32,15 @@ public class MessageListener extends Thread {
             while (true) {
                 // 1. Đọc loại gói tin
                 byte type = inp.readByte();
-                System.out.println("[SERVER] Đã nhận Byte Type: 0x" + String.format("%02X", type));
 
                 // 2. Đọc độ dài Payload
                 int length = inp.readInt();
-                System.out.println("[SERVER] Độ dài Payload nhận được: " + length + " bytes");
 
                 switch (type) {
                     case 0x01: // STRING
                         byte[] messageBytes = new byte[length];
                         inp.readFully(messageBytes);
                         String message = new String(messageBytes, StandardCharsets.UTF_8);
-                        System.out.println("[SERVER] Nội dung tin nhắn: " + message);
                         receivedCallback.onTextMessageReceived(message);
                         break;
 
@@ -53,8 +50,7 @@ public class MessageListener extends Thread {
                         fileName = new String(fileNameBytes, StandardCharsets.UTF_8);
                         savedPath = fileSavePath + "/" + fileName;
 
-                        System.out.println("[SERVER] Đang chuẩn bị nhận file: " + fileName);
-                        System.out.println("[SERVER] Đường dẫn lưu: " + savedPath);
+                        System.out.println("[SERVER] Đang nhận file: " + fileName);
 
                         fos = new FileOutputStream(savedPath);
                         break;
@@ -71,21 +67,18 @@ public class MessageListener extends Thread {
                         break;
 
                     case 0x04: // FILE UPLOAD DONE
-                        System.out.println("[SERVER] Nhận được tín hiệu kết thúc file (0x04)");
                         if (fos != null) {
                             fos.close();
                             fos = null;
-                            System.out.println("[SERVER] Đã đóng file stream.");
                         }
                         if (savedPath != null) {
-                            System.out.println("[SERVER] Gọi callback xử lý file sau khi nhận xong...");
+                            System.out.println("[SERVER] Đã nhận xong file: " + fileName);
                             receivedCallback.onFileMessageReceived(savedPath, fileName);
                         }
                         break;
 
                     default:
-                        System.out.println(
-                                "[SERVER] Type không xác định: " + type + ". Đang bỏ qua " + length + " bytes.");
+                        System.out.println("[SERVER] Gói tin không xác định: " + type + ". Bỏ qua.");
                         inp.skipBytes(length);
                         break;
                 }

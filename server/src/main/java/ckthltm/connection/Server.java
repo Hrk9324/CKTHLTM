@@ -39,13 +39,14 @@ public class Server {
 
         @Override
         public void onTextMessageReceived(String message) {
-            System.out.println("[SERVER] NHẬN YÊU CẦU MỚI: " + message);
+            System.out.println("[SERVER] Nhận yêu cầu: " + message);
             try {
                 // PARSE DATA
                 int n = Integer.parseInt(message.split("n=")[1].split(",")[0].trim()); // Phòng thi
                 int m = Integer.parseInt(message.split("m=")[1].split(",")[0].trim()); // Cán bộ
-                System.out.println("[SERVER] Parse Data: n(Phòng)=" + n + ", m(Cán bộ)=" + m);
                 int soCanBoGiamSat = m - 2 * n;
+
+                System.out.println("[SERVER] Tham số: n=" + n + ", m=" + m + ", canBoGiamSat=" + soCanBoGiamSat);
 
                 if (soCanBoGiamSat < 0) {
                     throw new Exception("Khong du can bo: can it nhat 2 can bo cho moi phong thi");
@@ -118,14 +119,12 @@ public class Server {
                     throw new Exception("Khong con line hop le de tao ca thi moi");
                 }
 
-                System.out.println("[SERVER] S=" + S + ", Lmax=" + Lmax + ", line=" + line + ", offset=" + offset);
+                System.out.println("[SERVER] Slot: line=" + line + ", offset=" + offset);
 
                 // TẠO PHÂN CÔNG GIÁM THỊ
                 List<PhanCongGiamThi> phanCongGiamThiFull = GenerateSchedule.generateGiamThiFull(line, phongThiFullList,
                         canBoFullList);
-                System.out.println("[SERVER] Phân công giám thị full đã được tạo.");
                 List<PhanCongGiamThi> phanCongGiamThiPartition = phanCongGiamThiFull.subList(offset, offset + n);
-                System.out.println("[SERVER] Phân công giám thị đã được tạo.");
 
                 // TẠO PHÂN CÔNG GIÁM SÁT
                 List<PhongThi> phongThiDuocSuDung = phongThiFullList.subList(offset, offset + n);
@@ -138,7 +137,6 @@ public class Server {
                         phongThiDuocSuDung,
                         canBoConLai,
                         soCanBoGiamSat, giamSatDAO);
-                System.out.println("[SERVER] Phân công giám sát đã được tạo.");
 
                 // GỬI KẾT QUẢ VỀ CLIENT
                 int caThi = yeuCauFullList.size() + 1;
@@ -152,12 +150,12 @@ public class Server {
                         caThi);
                 String filePath = outputDir + File.separator + fileName;
                 messageSender.sendFile(connectedSocket, filePath, fileName);
-                System.out.println("[SERVER] Kết quả đã được gửi về client.");
+                System.out.println("[SERVER] Đã gửi kết quả về client: " + fileName);
 
                 // LƯU YÊU CẦU VÀO DB 
                 YeuCau newYeuCau = new YeuCau(m, n, line);
                 if (yeuCauDAO.insert(newYeuCau)) {
-                    System.out.println("[SERVER] Yêu cầu đã được lưu vào database.");
+                    System.out.println("[SERVER] Đã lưu yêu cầu vào database.");
                 } else {
                     System.err.println("[SERVER] Lỗi khi lưu yêu cầu vào database.");
                 }
@@ -167,27 +165,23 @@ public class Server {
 
                 refreshUiStats();
             } catch (Exception e) {
-                System.err.println("Error: " + e.getMessage());
+                System.err.println("[SERVER] Lỗi xử lý yêu cầu: " + e.getMessage());
             }
         }
 
         @Override
         public void onFileMessageReceived(String savedPath, String fileName) {
-            System.out.println("Received file: " + fileName);
+            System.out.println("[SERVER] Nhận file: " + fileName);
             if (fileName.equals("DanhSachCanBoCoiThi.xlsx")) {
-                System.out.println("===> Processing: " + fileName);
+                System.out.println("[SERVER] Bắt đầu xử lý dữ liệu từ Excel...");
                 try {
                     // Xóa dữ liệu cũ trong DB
                     CanBoDAO canBoDAO = new CanBoDAO();
                     canBoDAO.deleteAll();
-                    System.out.println("Deleted records from CanBo table.");
                     PhongThiDAO phongThiDAO = new PhongThiDAO();
                     phongThiDAO.deleteAll();
-                    System.out.println("Deleted records from PhongThi table.");
                     new YeuCauDAO().deleteAll();
-                    System.out.println("Deleted records from YeuCau table.");
                     new GiamSatDAO().deleteAll();
-                    System.out.println("Deleted records from GiamSat table.");
 
                     // Xử lý Cán Bộ
                     List<CanBo> danhSachCanBo = DataAndFileHandle.readCanBoCoiThi(savedPath);
@@ -214,11 +208,11 @@ public class Server {
                         }
                     }
                     System.out.println("PhongThi: " + ptSuccess + "/" + ptSize + " records inserted.");
-                    System.out.println("===> Done.");
+                    System.out.println("[SERVER] Hoàn tất cập nhật DB từ Excel.");
 
                     refreshUiStats();
                 } catch (Exception e) {
-                    System.err.println("Error: " + e.getMessage());
+                    System.err.println("[SERVER] Lỗi xử lý Excel: " + e.getMessage());
                 }
             }
         }
