@@ -104,7 +104,7 @@ public class Client extends JFrame {
                 connectedSocket = new Socket(address, port);
 
                 appendLog(
-                        "✓ Đã kết nối server "
+                        "Đã kết nối server "
                                 + address.getHostAddress()
                                 + ":" + port);
 
@@ -117,7 +117,7 @@ public class Client extends JFrame {
 
             } catch (IOException e) {
 
-                appendLog("✗ Không thể kết nối: "
+                                appendLog("Không thể kết nối: "
                         + e.getMessage());
             }
 
@@ -140,7 +140,7 @@ public class Client extends JFrame {
                 String fileName) {
 
             appendLog(
-                    "✓ Đã nhận file: "
+                    "Đã nhận file: "
                             + fileName);
         }
     }
@@ -285,7 +285,7 @@ public class Client extends JFrame {
                 new BorderLayout(0, 14));
 
         card.add(
-                sectionLabel("⚙️ Gửi tham số"),
+                sectionLabel("Gửi tham số"),
                 BorderLayout.NORTH);
 
         JPanel fields = new JPanel(new GridLayout(2, 1, 0, 10));
@@ -302,7 +302,7 @@ public class Client extends JFrame {
                 labeledField("Giá trị m", txtM));
 
         JButton btnSend = roundButton(
-                "Gửi yêu cầu →",
+                "Gửi yêu cầu",
                 ACCENT_BLUE,
                 Color.WHITE);
 
@@ -328,7 +328,7 @@ public class Client extends JFrame {
                 new BorderLayout(0, 12));
 
         card.add(
-                sectionLabel("📂 Gửi file"),
+                sectionLabel("Gửi file"),
                 BorderLayout.NORTH);
 
         JPanel choosePanel = new JPanel(new BorderLayout(10, 0));
@@ -396,7 +396,7 @@ public class Client extends JFrame {
                 BorderLayout.EAST);
 
         JButton btnSend = roundButton(
-                "Gửi file →",
+                "Gửi file",
                 ACCENT_MINT,
                 Color.WHITE);
 
@@ -422,7 +422,7 @@ public class Client extends JFrame {
                 new BorderLayout(0, 10));
 
         panel.add(
-                sectionLabel("📋 Nhật ký hoạt động"),
+                sectionLabel("Nhật ký hoạt động"),
                 BorderLayout.NORTH);
 
         logArea = new JTextArea();
@@ -464,7 +464,7 @@ public class Client extends JFrame {
 
         if (nStr.isEmpty() || mStr.isEmpty()) {
 
-            appendLog("⚠ Vui lòng nhập n và m");
+                        appendLog("Cảnh báo: Vui lòng nhập n và m");
 
             return;
         }
@@ -483,7 +483,7 @@ public class Client extends JFrame {
 
         } catch (NumberFormatException e) {
 
-            appendLog("⚠ n và m phải là số nguyên");
+                        appendLog("Cảnh báo: n và m phải là số nguyên");
         }
     }
     // ── Choose file ────────────────────────────────
@@ -522,7 +522,7 @@ public class Client extends JFrame {
 
         if (selectedFile == null) {
 
-            appendLog("⚠ Chưa chọn file");
+                        appendLog("Cảnh báo: Chưa chọn file");
 
             return;
         }
@@ -536,13 +536,13 @@ public class Client extends JFrame {
                         selectedFile.getName());
 
                 appendLog(
-                        "✓ Đã gửi file: "
+                        "Đã gửi file: "
                                 + selectedFile.getName());
 
             } catch (Exception e) {
 
                 appendLog(
-                        "✗ Lỗi gửi file: "
+                        "Lỗi gửi file: "
                                 + e.getMessage());
             }
 
