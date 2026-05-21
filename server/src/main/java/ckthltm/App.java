@@ -9,6 +9,6 @@ public class App {
         System.setProperty("org.apache.logging.log4j.simplelog.StatusLogger.level", "OFF");
 
         Server server = new Server();
-        server.start(8124);
+        server.showUI();
     }
 }

@@ -305,15 +305,22 @@ public class Server {
 
     }
 
+    public void showUI() {
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                ui = new UI(this);
+                ui.display();
+            });
+        } catch (Exception e) {
+            System.err.println("[SERVER] Cannot start Swing UI: " + e.getMessage());
+        }
+    }
+
     public void start(int port) {
         try {
-            try {
-                SwingUtilities.invokeAndWait(() -> {
-                    ui = new UI();
-                    ui.display();
-                });
-            } catch (Exception e) {
-                System.err.println("[SERVER] Cannot start Swing UI: " + e.getMessage());
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                System.out.println("[SERVER] Server đã được khởi động trước đó.");
+                return;
             }
 
             // Tải dữ liệu từ DB vào bộ nhớ lần đầu
@@ -322,12 +329,19 @@ public class Server {
             refreshUiStats();
 
             this.serverSocket = new ServerSocket(port);
-            System.out.println("Server start at port: " + port);
+            System.out.println("[SERVER] Server start at port: " + port);
+            System.out.println("[SERVER] Đang chờ client kết nối...");
+
             connectedSocket = serverSocket.accept();
+            System.out.println("[SERVER] Client đã kết nối: " + connectedSocket.getInetAddress());
+
             MessageListener messageListener = new MessageListener(connectedSocket, fileSavePath, new ReceivedCallback());
             messageListener.start();
         } catch (IOException e) {
-            System.err.println(e);
+            System.err.println("[SERVER] Lỗi khi khởi động server: " + e.getMessage());
+            if (ui != null) {
+                ui.setServerControlEnabled(true);
+            }
         }
     }
 }

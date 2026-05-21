@@ -41,16 +41,23 @@ public class UI extends JFrame {
     private JLabel lblCanBo;
     private JLabel lblPhongThi;
     private JLabel lblCaThi;
+    private JTextField txtPort;
+    private JButton btnStartServer;
+
+    private final Server server;
 
     private PrintStream originalOut;
     private PrintStream originalErr;
 
-    public UI() {
+    private boolean serverRunning = false;
+
+    public UI(Server server) {
         super("TCP Server");
+        this.server = server;
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(950, 700);
-        setMinimumSize(new Dimension(850, 600));
+        setSize(950, 760);
+        setMinimumSize(new Dimension(850, 650));
         setResizable(false);
         setLocationRelativeTo(null);
 
@@ -84,6 +91,14 @@ public class UI extends JFrame {
         });
     }
 
+    public void setServerControlEnabled(boolean enabled) {
+        SwingUtilities.invokeLater(() -> {
+            txtPort.setEnabled(enabled);
+            btnStartServer.setEnabled(enabled);
+            btnStartServer.setText(enabled ? "Bắt đầu server" : "Đang chạy...");
+        });
+    }
+
     // ── Layout ────────────────────────────────────
     private JPanel buildHeader() {
         JPanel header = new JPanel(new BorderLayout());
@@ -111,9 +126,13 @@ public class UI extends JFrame {
 
     private JPanel buildCenter() {
         JPanel center = new JPanel();
-        center.setLayout(new BoxLayout(center, BoxLayout.X_AXIS));
+        center.setLayout(new BoxLayout(center, BoxLayout.Y_AXIS));
         center.setBackground(BG_MAIN);
         center.setBorder(new EmptyBorder(20, 24, 20, 24));
+
+        JPanel contentRow = new JPanel();
+        contentRow.setLayout(new BoxLayout(contentRow, BoxLayout.X_AXIS));
+        contentRow.setOpaque(false);
 
         JPanel left = buildStatsPanel();
         fixPanelWidth(left, LEFT_WIDTH);
@@ -121,9 +140,16 @@ public class UI extends JFrame {
         JPanel right = buildLogPanel();
         fixPanelWidth(right, RIGHT_WIDTH);
 
-        center.add(left);
-        center.add(Box.createHorizontalStrut(14));
-        center.add(right);
+        contentRow.add(left);
+        contentRow.add(Box.createHorizontalStrut(14));
+        contentRow.add(right);
+
+        JPanel controlPanel = buildServerControlPanel();
+        controlPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+
+        center.add(contentRow);
+        center.add(Box.createVerticalStrut(14));
+        center.add(controlPanel);
 
         return center;
     }
@@ -176,6 +202,123 @@ public class UI extends JFrame {
         return panel;
     }
 
+    private JPanel buildServerControlPanel() {
+        JPanel panel = createCard();
+        panel.setLayout(new BorderLayout(12, 10));
+
+        JLabel title = sectionLabel("Điều khiển server");
+
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        inputPanel.setOpaque(false);
+
+        JLabel lblPort = new JLabel("Port");
+        lblPort.setFont(FONT_LABEL);
+        lblPort.setForeground(TEXT_MID);
+
+        txtPort = new JTextField();
+        txtPort.setFont(FONT_VALUE);
+        txtPort.setForeground(TEXT_DARK);
+        txtPort.setBackground(LOG_BG);
+        txtPort.setText("8124");
+        txtPort.setPreferredSize(new Dimension(0, 38));
+        txtPort.setMinimumSize(new Dimension(120, 38));
+        txtPort.setBorder(new CompoundBorder(
+                new LineBorder(BORDER_COLOR, 1, true),
+                new EmptyBorder(5, 12, 5, 12)));
+
+        btnStartServer = new JButton("Bắt đầu server");
+        btnStartServer.setFont(FONT_VALUE);
+        btnStartServer.setForeground(Color.WHITE);
+        btnStartServer.setBackground(ACCENT_BLUE);
+        btnStartServer.setFocusPainted(false);
+        btnStartServer.setBorder(new EmptyBorder(5, 16, 5, 16));
+        btnStartServer.setPreferredSize(new Dimension(145, 38));
+        btnStartServer.setMinimumSize(new Dimension(145, 38));
+        btnStartServer.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnStartServer.addActionListener(e -> handleStartServer());
+
+        JPanel portWrap = new JPanel(new BorderLayout(8, 0));
+        portWrap.setOpaque(false);
+        portWrap.add(lblPort, BorderLayout.WEST);
+        portWrap.add(txtPort, BorderLayout.CENTER);
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 1.0;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(0, 0, 0, 10);
+        inputPanel.add(portWrap, gbc);
+
+        gbc = new GridBagConstraints();
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        inputPanel.add(btnStartServer, gbc);
+
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(inputPanel, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private void handleStartServer() {
+        if (serverRunning) {
+            return;
+        }
+
+        String portText = txtPort.getText().trim();
+
+        if (portText.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Vui lòng nhập port trước khi bắt đầu server.",
+                    "Thiếu port",
+                    JOptionPane.WARNING_MESSAGE);
+            txtPort.requestFocus();
+            return;
+        }
+
+        int port;
+        try {
+            port = Integer.parseInt(portText);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Port phải là số nguyên.",
+                    "Port không hợp lệ",
+                    JOptionPane.ERROR_MESSAGE);
+            txtPort.requestFocus();
+            return;
+        }
+
+        if (port < 1 || port > 65535) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Port phải nằm trong khoảng 1 đến 65535.",
+                    "Port không hợp lệ",
+                    JOptionPane.ERROR_MESSAGE);
+            txtPort.requestFocus();
+            return;
+        }
+
+        serverRunning = true;
+
+        txtPort.setEnabled(false);
+        btnStartServer.setText("Đang chạy...");
+        btnStartServer.setForeground(Color.WHITE);
+        btnStartServer.setBackground(ACCENT_BLUE);
+
+        appendLog("[SERVER UI] Đang khởi động server tại port " + port);
+
+        Thread serverThread = new Thread(() -> {
+            server.start(port);
+        }, "Server-Start-Thread");
+
+        serverThread.start();
+    }
+    
     // ── Style helpers (from client style) ─────────
     private JPanel createCard() {
         JPanel card = new JPanel() {
