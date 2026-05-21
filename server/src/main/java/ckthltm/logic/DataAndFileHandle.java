@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +43,17 @@ public class DataAndFileHandle {
 
         Sheet sheet = danhSachPhanCong.createSheet("PhanCong");
 
+        int lastCol = 5; // 0..5
+        int tableHeaderStartRow = 6;
+        int dataStartRow = 8;
+
+        writeNationalHeader(
+                sheet,
+                danhSachPhanCong,
+                lastCol,
+                "DANH SÁCH PHÂN CÔNG GIÁM THỊ COI THI",
+                "Phiên: Ca " + caThi + "  -  Ngày: " + todayDdMmYyyy());
+
         Map<String, CanBo> canBoMap = buildCanBoMap(danhSachCanBo);
 
         // Khởi tạo các Style
@@ -48,21 +61,20 @@ public class DataAndFileHandle {
         CellStyle centerStyle = createCenterStyle(danhSachPhanCong);
         CellStyle leftStyle = createLeftStyle(danhSachPhanCong);
 
-        // Tạo sẵn lưới ô cho Header (Row 0 và Row 1, Cột 0 -> 5) để hiển thị viền đầy
-        // đủ khi merge
-        Row row0 = sheet.createRow(0);
-        Row row1 = sheet.createRow(1);
+        // Tạo sẵn lưới ô cho Header (2 dòng, 0..5) để hiển thị viền đầy đủ khi merge
+        Row row0 = sheet.createRow(tableHeaderStartRow);
+        Row row1 = sheet.createRow(tableHeaderStartRow + 1);
         for (int i = 0; i <= 5; i++) {
             row0.createCell(i).setCellStyle(headerStyle);
             row1.createCell(i).setCellStyle(headerStyle);
         }
 
         // Gộp ô (Merge cells)
-        sheet.addMergedRegion(new CellRangeAddress(0, 1, 0, 0));
-        sheet.addMergedRegion(new CellRangeAddress(0, 1, 1, 1));
-        sheet.addMergedRegion(new CellRangeAddress(0, 1, 2, 2));
-        sheet.addMergedRegion(new CellRangeAddress(0, 0, 3, 4));
-        sheet.addMergedRegion(new CellRangeAddress(0, 1, 5, 5));
+        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 0, 0));
+        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 1, 1));
+        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 2, 2));
+        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow, 3, 4));
+        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 5, 5));
 
         // Đặt giá trị cho Header
         row0.getCell(0).setCellValue("STT");
@@ -74,7 +86,7 @@ public class DataAndFileHandle {
         row1.getCell(3).setCellValue("Giám thị 1");
         row1.getCell(4).setCellValue("Giám thị 2");
 
-        int offset = 2;
+        int offset = dataStartRow;
         int stt = 0;
 
         for (int i = 0; i < danhSachPhanCongGiamThi.size(); ++i) {
@@ -126,11 +138,22 @@ public class DataAndFileHandle {
 
         Sheet sheet = danhSachPhanCong.createSheet("GiamSat");
 
+        int lastCol = 3; // 0..3
+        int tableHeaderRow = 6;
+        int dataStartRow = 7;
+
+        writeNationalHeader(
+            sheet,
+            danhSachPhanCong,
+            lastCol,
+            "DANH SÁCH GIÁM SÁT HÀNH LANG",
+            "Phiên: Ca " + caThi + "  -  Ngày: " + todayDdMmYyyy());
+
         CellStyle headerStyle = createHeaderStyle(danhSachPhanCong);
         CellStyle centerStyle = createCenterStyle(danhSachPhanCong);
         CellStyle leftStyle = createLeftStyle(danhSachPhanCong);
 
-        Row row0 = sheet.createRow(0);
+        Row row0 = sheet.createRow(tableHeaderRow);
         String[] headers = { "STT", "Mã GV", "Họ và tên", "Phòng thi được giám sát" };
         for (int i = 0; i < headers.length; i++) {
             Cell cell = row0.createCell(i);
@@ -138,7 +161,7 @@ public class DataAndFileHandle {
             cell.setCellStyle(headerStyle);
         }
 
-        int offset = 1;
+        int offset = dataStartRow;
         int stt = 0;
 
         if (danhSachGiamSat == null || danhSachGiamSat.isEmpty()) {
@@ -312,6 +335,114 @@ public class DataAndFileHandle {
         Cell cell = row.createCell(column);
         cell.setCellValue(value);
         cell.setCellStyle(style);
+    }
+
+    private static String todayDdMmYyyy() {
+        return LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    }
+
+    private static void writeNationalHeader(
+            Sheet sheet,
+            Workbook workbook,
+            int lastCol,
+            String title,
+            String subTitle) {
+        // Row 0: Quốc hiệu
+        Row r0 = sheet.createRow(0);
+        Cell c0 = r0.createCell(0);
+        c0.setCellValue("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM");
+        c0.setCellStyle(createNationalTitleStyle(workbook));
+        mergeRow(sheet, 0, 0, lastCol);
+        applyStyleToMergedRow(r0, lastCol, c0.getCellStyle());
+
+        // Row 1: Khẩu hiệu
+        Row r1 = sheet.createRow(1);
+        Cell c1 = r1.createCell(0);
+        c1.setCellValue("Độc lập - Tự do - Hạnh phúc");
+        c1.setCellStyle(createNationalMottoStyle(workbook));
+        mergeRow(sheet, 1, 0, lastCol);
+        applyStyleToMergedRow(r1, lastCol, c1.getCellStyle());
+
+        // Row 2: trống
+        sheet.createRow(2);
+
+        // Row 3: Tiêu đề chính
+        Row r3 = sheet.createRow(3);
+        Cell c3 = r3.createCell(0);
+        c3.setCellValue(title);
+        c3.setCellStyle(createMainTitleStyle(workbook));
+        mergeRow(sheet, 3, 0, lastCol);
+        applyStyleToMergedRow(r3, lastCol, c3.getCellStyle());
+
+        // Row 4: Phiên/Ngày
+        Row r4 = sheet.createRow(4);
+        Cell c4 = r4.createCell(0);
+        c4.setCellValue(subTitle);
+        c4.setCellStyle(createSubTitleStyle(workbook));
+        mergeRow(sheet, 4, 0, lastCol);
+        applyStyleToMergedRow(r4, lastCol, c4.getCellStyle());
+
+        // Row 5: trống
+        sheet.createRow(5);
+    }
+
+    private static void mergeRow(Sheet sheet, int rowIndex, int firstCol, int lastCol) {
+        sheet.addMergedRegion(new CellRangeAddress(rowIndex, rowIndex, firstCol, lastCol));
+    }
+
+    private static void applyStyleToMergedRow(Row row, int lastCol, CellStyle style) {
+        for (int col = 1; col <= lastCol; col++) {
+            Cell cell = row.getCell(col);
+            if (cell == null) {
+                cell = row.createCell(col);
+            }
+            cell.setCellStyle(style);
+        }
+    }
+
+    private static CellStyle createNationalTitleStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 12);
+        style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        return style;
+    }
+
+    private static CellStyle createNationalMottoStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setUnderline(Font.U_SINGLE);
+        font.setFontHeightInPoints((short) 12);
+        style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        return style;
+    }
+
+    private static CellStyle createMainTitleStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 14);
+        style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        return style;
+    }
+
+    private static CellStyle createSubTitleStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setItalic(true);
+        font.setFontHeightInPoints((short) 11);
+        style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        return style;
     }
 
     private static CellStyle createHeaderStyle(Workbook workbook) {
