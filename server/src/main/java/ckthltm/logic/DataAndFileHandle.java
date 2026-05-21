@@ -20,13 +20,21 @@ import ckthltm.models.result.PhanCongGiamThi;
 
 public class DataAndFileHandle {
 
+    private static String buildPhanCongFileName(int caThi) {
+        return "phan_cong_cathi_" + caThi + ".xlsx";
+    }
+
+    private static String buildGiamSatFileName(int caThi) {
+        return "giam_sat_cathi_" + caThi + ".xlsx";
+    }
+
     public static String createDanhSachPhanCong(
             String outputDir,
             List<CanBo> danhSachCanBo,
             List<PhanCongGiamThi> danhSachPhanCongGiamThi,
             int caThi) {
-        String fileName = "DanhSachPhanCong_caThi-" + caThi + ".xlsx";
-        String filePath = outputDir + "/" + fileName;
+        String fileName = buildPhanCongFileName(caThi);
+        String filePath = outputDir + File.separator + fileName;
 
         Workbook danhSachPhanCong = openOrCreateWorkbook(filePath);
         removeSheetIfExists(danhSachPhanCong, "PhanCong");
@@ -110,13 +118,8 @@ public class DataAndFileHandle {
             String outputDir,
             List<PhanCongGiamSat> danhSachGiamSat,
             int caThi) {
-        String fileName = "DanhSachPhanCong_caThi-" + caThi + ".xlsx";
-        String filePath = outputDir + "/" + fileName;
-
-        if (danhSachGiamSat == null || danhSachGiamSat.isEmpty()) {
-            System.out.println("Ca thi " + caThi + ": Không có cán bộ dư để xếp giám sát hành lang.");
-            return fileName;
-        }
+        String fileName = buildGiamSatFileName(caThi);
+        String filePath = outputDir + File.separator + fileName;
 
         Workbook danhSachPhanCong = openOrCreateWorkbook(filePath);
         removeSheetIfExists(danhSachPhanCong, "GiamSat");
@@ -138,24 +141,28 @@ public class DataAndFileHandle {
         int offset = 1;
         int stt = 0;
 
-        for (int i = 0; i < danhSachGiamSat.size(); ++i) {
-            PhanCongGiamSat phanCong = danhSachGiamSat.get(i);
-            CanBo giamSat = phanCong.getCanBo();
+        if (danhSachGiamSat == null || danhSachGiamSat.isEmpty()) {
+            System.out.println("Ca thi " + caThi + ": Không có cán bộ dư để xếp giám sát hành lang.");
+        } else {
+            for (int i = 0; i < danhSachGiamSat.size(); ++i) {
+                PhanCongGiamSat phanCong = danhSachGiamSat.get(i);
+                CanBo giamSat = phanCong.getCanBo();
 
-            Row row = sheet.createRow(offset + i);
+                Row row = sheet.createRow(offset + i);
 
-            createStyledCell(row, 0, String.valueOf(++stt), centerStyle);
+                createStyledCell(row, 0, String.valueOf(++stt), centerStyle);
 
-            if (giamSat == null) {
-                createStyledCell(row, 1, "", centerStyle);
-                createStyledCell(row, 2, "", leftStyle);
+                if (giamSat == null) {
+                    createStyledCell(row, 1, "", centerStyle);
+                    createStyledCell(row, 2, "", leftStyle);
+                    createStyledCell(row, 3, formatPhongGiamSat(phanCong.getPhongThiList()), centerStyle);
+                    continue;
+                }
+
+                createStyledCell(row, 1, giamSat.getMaGV(), centerStyle);
+                createStyledCell(row, 2, giamSat.getHoTen(), leftStyle);
                 createStyledCell(row, 3, formatPhongGiamSat(phanCong.getPhongThiList()), centerStyle);
-                continue;
             }
-
-            createStyledCell(row, 1, giamSat.getMaGV(), centerStyle);
-            createStyledCell(row, 2, giamSat.getHoTen(), leftStyle);
-            createStyledCell(row, 3, formatPhongGiamSat(phanCong.getPhongThiList()), centerStyle);
         }
 
         // Tự động căn chỉnh độ rộng cột

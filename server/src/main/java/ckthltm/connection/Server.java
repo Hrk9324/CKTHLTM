@@ -140,17 +140,21 @@ public class Server {
 
                 // GỬI KẾT QUẢ VỀ CLIENT
                 int caThi = yeuCauFullList.size() + 1;
-                String fileName = DataAndFileHandle.createDanhSachPhanCong(outputDir,
+                String phanCongFileName = DataAndFileHandle.createDanhSachPhanCong(outputDir,
                         canBoFullList,
                         phanCongGiamThiPartition,
                         caThi);
-                DataAndFileHandle.createDanhSachGiamSat(
+                String giamSatFileName = DataAndFileHandle.createDanhSachGiamSat(
                         outputDir,
                         phanCongGiamSatList,
                         caThi);
-                String filePath = outputDir + File.separator + fileName;
-                messageSender.sendFile(connectedSocket, filePath, fileName);
-                System.out.println("[SERVER] Đã gửi kết quả về client: " + fileName);
+
+                String phanCongFilePath = outputDir + File.separator + phanCongFileName;
+                String giamSatFilePath = outputDir + File.separator + giamSatFileName;
+
+                messageSender.sendFile(connectedSocket, phanCongFilePath, phanCongFileName);
+                messageSender.sendFile(connectedSocket, giamSatFilePath, giamSatFileName);
+                System.out.println("[SERVER] Đã gửi kết quả về client: " + phanCongFileName + ", " + giamSatFileName);
 
                 // LƯU YÊU CẦU VÀO DB 
                 YeuCau newYeuCau = new YeuCau(m, n, line);
