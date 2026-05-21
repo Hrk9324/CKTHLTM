@@ -161,65 +161,65 @@ public class GiamSatDAO extends BaseDAO {
         }
     }
 
-    public boolean daTungGiamSatPhong(String maGV, String phongThi) {
-        String sql = """
-                SELECT 1
-                FROM giam_sat
-                WHERE ma_gv = ?
-                  AND phong_thi = ?
-                LIMIT 1
-                """;
+    // public boolean daTungGiamSatPhong(String maGV, String phongThi) {
+    //     String sql = """
+    //             SELECT 1
+    //             FROM giam_sat
+    //             WHERE ma_gv = ?
+    //               AND phong_thi = ?
+    //             LIMIT 1
+    //             """;
 
-        try (Connection conn = getConnection();
-                PreparedStatement ps = conn.prepareStatement(sql)) {
+    //     try (Connection conn = getConnection();
+    //             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setString(1, maGV);
-            ps.setString(2, phongThi);
+    //         ps.setString(1, maGV);
+    //         ps.setString(2, phongThi);
 
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
+    //         try (ResultSet rs = ps.executeQuery()) {
+    //             return rs.next();
+    //         }
 
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    //     } catch (SQLException e) {
+    //         e.printStackTrace();
+    //     }
 
-        return false;
-    }
+    //     return false;
+    // }
 
-    public boolean coTheGiamSatKhoi(String maGV, List<String> phongThiList) {
-        if (maGV == null || maGV.trim().isEmpty()) {
-            return false;
-        }
+    // public boolean coTheGiamSatKhoi(String maGV, List<String> phongThiList) {
+    //     if (maGV == null || maGV.trim().isEmpty()) {
+    //         return false;
+    //     }
 
-        if (phongThiList == null || phongThiList.isEmpty()) {
-            return false;
-        }
+    //     if (phongThiList == null || phongThiList.isEmpty()) {
+    //         return false;
+    //     }
 
-        String placeholders = String.join(",", Collections.nCopies(phongThiList.size(), "?"));
-        String sql = "SELECT 1 FROM giam_sat WHERE ma_gv = ? AND phong_thi IN (" + placeholders + ") LIMIT 1";
+    //     String placeholders = String.join(",", Collections.nCopies(phongThiList.size(), "?"));
+    //     String sql = "SELECT 1 FROM giam_sat WHERE ma_gv = ? AND phong_thi IN (" + placeholders + ") LIMIT 1";
 
-        try (Connection conn = getConnection()) {
-            if (conn == null) {
-                System.err.println("Cannot obtain DB connection");
-                return false;
-            }
+    //     try (Connection conn = getConnection()) {
+    //         if (conn == null) {
+    //             System.err.println("Cannot obtain DB connection");
+    //             return false;
+    //         }
 
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                ps.setString(1, maGV);
-                for (int i = 0; i < phongThiList.size(); i++) {
-                    ps.setString(i + 2, phongThiList.get(i));
-                }
+    //         try (PreparedStatement ps = conn.prepareStatement(sql)) {
+    //             ps.setString(1, maGV);
+    //             for (int i = 0; i < phongThiList.size(); i++) {
+    //                 ps.setString(i + 2, phongThiList.get(i));
+    //             }
 
-                try (ResultSet rs = ps.executeQuery()) {
-                    boolean found = rs.next();
-                    return !found;
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("SQL error in coTheGiamSatKhoi: " + e.getMessage());
-            e.printStackTrace();
-            return false;
-        }
-    }
+    //             try (ResultSet rs = ps.executeQuery()) {
+    //                 boolean found = rs.next();
+    //                 return !found;
+    //             }
+    //         }
+    //     } catch (SQLException e) {
+    //         System.err.println("SQL error in coTheGiamSatKhoi: " + e.getMessage());
+    //         e.printStackTrace();
+    //         return false;
+    //     }
+    // }
 }

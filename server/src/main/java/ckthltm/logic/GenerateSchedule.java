@@ -3,9 +3,9 @@ package ckthltm.logic;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import ckthltm.dal.GiamSatDAO;
 import ckthltm.models.CanBo;
 import ckthltm.models.PhongThi;
 import ckthltm.models.result.PhanCongGiamSat;
@@ -106,7 +106,7 @@ public class GenerateSchedule {
             List<PhongThi> phongThiList,
             List<CanBo> canBoConLai,
             int soCanBoGiamSat,
-            GiamSatDAO giamSatDAO) {
+            Map<String, Set<String>> giamSatHistoryByMaGV) {
         List<PhanCongGiamSat> result = new ArrayList<>();
 
         if (phongThiList == null || phongThiList.isEmpty()) {
@@ -135,12 +135,12 @@ public class GenerateSchedule {
 
             List<String> phongTrongKhoi = toPhongList(khoiList.get(startIndex));
 
-            if (giamSatDAO != null && cb != null && cb.getMaGV() != null
-                    && !giamSatDAO.coTheGiamSatKhoi(cb.getMaGV(), phongTrongKhoi)) {
+            if (cb != null && cb.getMaGV() != null
+                    && !coTheGiamSatKhoiTrongRam(cb.getMaGV(), phongTrongKhoi, giamSatHistoryByMaGV)) {
                 boolean found = false;
                 for (int j = 0; j < khoiList.size(); j++) {
                     List<String> altPhong = toPhongList(khoiList.get((startIndex + j) % khoiList.size()));
-                    if (giamSatDAO.coTheGiamSatKhoi(cb.getMaGV(), altPhong)) {
+                    if (coTheGiamSatKhoiTrongRam(cb.getMaGV(), altPhong, giamSatHistoryByMaGV)) {
                         phongTrongKhoi = altPhong;
                         found = true;
                         break;
@@ -155,6 +155,37 @@ public class GenerateSchedule {
         }
 
         return result;
+    }
+
+    private static boolean coTheGiamSatKhoiTrongRam(
+            String maGV,
+            List<String> phongThiList,
+            Map<String, Set<String>> giamSatHistoryByMaGV) {
+        if (maGV == null || maGV.trim().isEmpty()) {
+            return false;
+        }
+
+        if (phongThiList == null || phongThiList.isEmpty()) {
+            return false;
+        }
+
+        // No history provided => don't block scheduling.
+        if (giamSatHistoryByMaGV == null) {
+            return true;
+        }
+
+        Set<String> phongDaTungGiamSat = giamSatHistoryByMaGV.get(maGV);
+        if (phongDaTungGiamSat == null || phongDaTungGiamSat.isEmpty()) {
+            return true;
+        }
+
+        for (String phong : phongThiList) {
+            if (phongDaTungGiamSat.contains(phong)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static List<String> toPhongList(List<PhongThi> khoi) {

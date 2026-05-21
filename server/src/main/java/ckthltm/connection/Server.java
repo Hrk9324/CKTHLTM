@@ -5,7 +5,11 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import javax.swing.SwingUtilities;
 
@@ -17,6 +21,7 @@ import ckthltm.interfaces.MessageCallback;
 import ckthltm.logic.DataAndFileHandle;
 import ckthltm.logic.GenerateSchedule;
 import ckthltm.models.CanBo;
+import ckthltm.models.GiamSat;
 import ckthltm.models.PhongThi;
 import ckthltm.models.YeuCau;
 import ckthltm.models.result.PhanCongGiamSat;
@@ -34,6 +39,7 @@ public class Server {
     private List<CanBo> canBoFullList = new ArrayList<>();
     private List<PhongThi> phongThiFullList = new ArrayList<>();
     private List<YeuCau> yeuCauFullList = new ArrayList<>();
+    private final Map<String, Set<String>> giamSatHistoryByMaGV = new HashMap<>();
 
     private void loadDataToMemory() {
         try {
@@ -41,6 +47,19 @@ public class Server {
             canBoFullList = new CanBoDAO().getAll();
             phongThiFullList = new PhongThiDAO().getAll();
             yeuCauFullList = new YeuCauDAO().getAll();
+
+            giamSatHistoryByMaGV.clear();
+            List<GiamSat> giamSatFullList = new GiamSatDAO().getAll();
+            if (giamSatFullList != null) {
+                for (GiamSat gs : giamSatFullList) {
+                    if (gs == null || gs.getMaGV() == null || gs.getPhongThi() == null) {
+                        continue;
+                    }
+                    giamSatHistoryByMaGV
+                            .computeIfAbsent(gs.getMaGV(), k -> new HashSet<>())
+                            .add(gs.getPhongThi());
+                }
+            }
             System.out.println("[SERVER] Hoàn tất tải dữ liệu: " + canBoFullList.size() + " cán bộ, "
                     + phongThiFullList.size() + " phòng thi, " + yeuCauFullList.size() + " yêu cầu.");
         } catch (Exception e) {
@@ -166,7 +185,8 @@ public class Server {
                 List<PhanCongGiamSat> phanCongGiamSatList = GenerateSchedule.generateGiamSat(
                         phongThiDuocSuDung,
                         canBoConLai,
-                        soCanBoGiamSat, giamSatDAO);
+                    soCanBoGiamSat,
+                    giamSatHistoryByMaGV);
 
                 // GỬI KẾT QUẢ VỀ CLIENT
                 int caThi = yeuCauFullList.size() + 1;
@@ -200,6 +220,20 @@ public class Server {
                 // LƯU GIÁM SÁT VÀO DB
                 giamSatDAO.insertAllPhanCongGiamSat(phanCongGiamSatList);
 
+                // Cập nhật lịch sử giám sát trong RAM sau khi insert DB thành công
+                for (PhanCongGiamSat pc : phanCongGiamSatList) {
+                    if (pc == null || pc.getCanBo() == null || pc.getCanBo().getMaGV() == null) {
+                        continue;
+                    }
+                    List<String> phongList = pc.getPhongThiList();
+                    if (phongList == null || phongList.isEmpty()) {
+                        continue;
+                    }
+                    giamSatHistoryByMaGV
+                            .computeIfAbsent(pc.getCanBo().getMaGV(), k -> new HashSet<>())
+                            .addAll(phongList);
+                }
+
                 refreshUiStats();
             } catch (Exception e) {
                 System.err.println("[SERVER] Lỗi xử lý yêu cầu: " + e.getMessage());
@@ -224,6 +258,7 @@ public class Server {
                     canBoFullList.clear();
                     phongThiFullList.clear();
                     yeuCauFullList.clear();
+                    giamSatHistoryByMaGV.clear();
 
                     // Xử lý Cán Bộ
                     List<CanBo> danhSachCanBo = DataAndFileHandle.readCanBoCoiThi(savedPath);
