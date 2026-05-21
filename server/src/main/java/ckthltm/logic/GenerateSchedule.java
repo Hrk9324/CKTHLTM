@@ -107,46 +107,58 @@ public class GenerateSchedule {
             return result;
         }
 
-        int soKhoi = Math.min(soCanBoGiamSat, canBoConLai.size());
+        int soCanBoCanXep = Math.min(soCanBoGiamSat, canBoConLai.size());
 
-        if (soKhoi <= 0) {
+        if (soCanBoCanXep <= 0) {
             return result;
         }
 
-        List<List<PhongThi>> khoiList = GenerateSchedule.chiaKhoiPhongThi(
-                phongThiList,
-                soKhoi);
+        int soKhoi = Math.min(phongThiList.size(), soCanBoCanXep);
+        List<List<PhongThi>> khoiList = GenerateSchedule.chiaKhoiPhongThi(phongThiList, soKhoi);
+        if (khoiList == null || khoiList.isEmpty()) {
+            return result;
+        }
 
-        Set<String> usedMaGV = new HashSet<>();
+        for (int i = 0; i < soCanBoCanXep; i++) {
+            CanBo cb = canBoConLai.get(i);
+            int startIndex = i % khoiList.size();
 
-        for (List<PhongThi> khoi : khoiList) {
-            List<String> phongTrongKhoi = new ArrayList<>();
+            List<String> phongTrongKhoi = toPhongList(khoiList.get(startIndex));
 
-            for (PhongThi phong : khoi) {
-                phongTrongKhoi.add(phong.getPhongThi());
-            }
-
-            CanBo selected = null;
-
-            for (CanBo cb : canBoConLai) {
-                if (usedMaGV.contains(cb.getMaGV())) {
-                    continue;
+            if (giamSatDAO != null && cb != null && cb.getMaGV() != null
+                    && !giamSatDAO.coTheGiamSatKhoi(cb.getMaGV(), phongTrongKhoi)) {
+                boolean found = false;
+                for (int j = 0; j < khoiList.size(); j++) {
+                    List<String> altPhong = toPhongList(khoiList.get((startIndex + j) % khoiList.size()));
+                    if (giamSatDAO.coTheGiamSatKhoi(cb.getMaGV(), altPhong)) {
+                        phongTrongKhoi = altPhong;
+                        found = true;
+                        break;
+                    }
                 }
 
-                if (giamSatDAO.coTheGiamSatKhoi(cb.getMaGV(), phongTrongKhoi)) {
-                    selected = cb;
-                    break;
+                if (!found) {
                 }
             }
 
-            result.add(new PhanCongGiamSat(selected, phongTrongKhoi));
-
-            if (selected != null) {
-                usedMaGV.add(selected.getMaGV());
-            }
+            result.add(new PhanCongGiamSat(cb, phongTrongKhoi));
         }
 
         return result;
+    }
+
+    private static List<String> toPhongList(List<PhongThi> khoi) {
+        List<String> phongTrongKhoi = new ArrayList<>();
+        if (khoi == null) {
+            return phongTrongKhoi;
+        }
+
+        for (PhongThi phong : khoi) {
+            if (phong != null && phong.getPhongThi() != null) {
+                phongTrongKhoi.add(phong.getPhongThi());
+            }
+        }
+        return phongTrongKhoi;
     }
 
     public static List<List<PhongThi>> chiaKhoiPhongThi(
