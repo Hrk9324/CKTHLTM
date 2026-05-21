@@ -59,6 +59,24 @@ public class Server {
         }
     }
 
+    private static void insertYeuCauSortedByLine(List<YeuCau> yeuCauList, YeuCau newYeuCau) {
+        if (yeuCauList == null || newYeuCau == null) {
+            return;
+        }
+
+        int newLine = newYeuCau.getLine();
+        int insertIndex = yeuCauList.size();
+        for (int i = 0; i < yeuCauList.size(); i++) {
+            YeuCau existing = yeuCauList.get(i);
+            if (existing != null && existing.getLine() > newLine) {
+                insertIndex = i;
+                break;
+            }
+        }
+
+        yeuCauList.add(insertIndex, newYeuCau);
+    }
+
     private class ReceivedCallback implements MessageCallback {
 
         @Override
@@ -76,7 +94,6 @@ public class Server {
                     throw new Exception("Can it nhat 1 can bo giam sat");
                 }
 
-                // SỬ DỤNG DỮ LIỆU TỪ BỘ NHỚ
                 if (m > canBoFullList.size()) {
                     throw new Exception("So can bo yeu cau lon hon so can bo trong he thong");
                 }
@@ -96,13 +113,6 @@ public class Server {
 
                 int line = -1;
                 int offset = 0;
-
-                yeuCauFullList.sort((a, b) -> {
-                    if (a.getLine() != b.getLine()) {
-                        return Integer.compare(a.getLine(), b.getLine());
-                    }
-                    return Long.compare(a.getId(), b.getId());
-                });
 
                 int currentLine = 0;
                 int soPhongThiDaDung = 0;
@@ -139,9 +149,12 @@ public class Server {
                 System.out.println("[SERVER] Slot: line=" + line + ", offset=" + offset);
 
                 // TẠO PHÂN CÔNG GIÁM THỊ
-                List<PhanCongGiamThi> phanCongGiamThiFull = GenerateSchedule.generateGiamThiFull(line, phongThiFullList,
-                        canBoFullList);
-                List<PhanCongGiamThi> phanCongGiamThiPartition = phanCongGiamThiFull.subList(offset, offset + n);
+                List<PhanCongGiamThi> phanCongGiamThiPartition = GenerateSchedule.generateGiamThiPartition(
+                    line,
+                    phongThiFullList,
+                    canBoFullList,
+                    offset,
+                    n);
 
                 // TẠO PHÂN CÔNG GIÁM SÁT
                 List<PhongThi> phongThiDuocSuDung = phongThiFullList.subList(offset, offset + n);
@@ -178,8 +191,8 @@ public class Server {
                 YeuCauDAO yeuCauDAO = new YeuCauDAO();
                 if (yeuCauDAO.insert(newYeuCau)) {
                     System.out.println("[SERVER] Đã lưu yêu cầu vào database.");
-                    // Cập nhật dữ liệu trong bộ nhớ
-                    yeuCauFullList.add(newYeuCau);
+                    // Cập nhật dữ liệu trong bộ nhớ (giữ đúng thứ tự theo line)
+                    insertYeuCauSortedByLine(yeuCauFullList, newYeuCau);
                 } else {
                     System.err.println("[SERVER] Lỗi khi lưu yêu cầu vào database.");
                 }

@@ -1,7 +1,6 @@
 package ckthltm.logic;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -13,10 +12,20 @@ import ckthltm.models.result.PhanCongGiamSat;
 import ckthltm.models.result.PhanCongGiamThi;
 
 public class GenerateSchedule {
-    public static List<PhanCongGiamThi> generateGiamThiFull(
+    public static List<PhanCongGiamThi> generateGiamThiPartition(
             int line,
             List<PhongThi> phongThiList,
-            List<CanBo> canBoList) throws Exception {
+            List<CanBo> canBoList,
+            int offset,
+            int count) throws Exception {
+
+        if (offset < 0) {
+            throw new IllegalArgumentException("offset khong hop le");
+        }
+
+        if (count < 0) {
+            throw new IllegalArgumentException("count khong hop le");
+        }
 
         if (phongThiList == null || phongThiList.isEmpty()) {
             throw new IllegalArgumentException("Danh sach phong thi rong");
@@ -26,14 +35,14 @@ public class GenerateSchedule {
             throw new IllegalArgumentException("Danh sach can bo rong");
         }
 
-        List<PhongThi> sortedPhongThiList = new ArrayList<>(phongThiList);
-        List<CanBo> sortedCanBoList = new ArrayList<>(canBoList);
+        if (offset + count > phongThiList.size()) {
+            throw new IllegalArgumentException(
+                    "offset+count vuot qua so phong thi. offset=" + offset + ", count=" + count
+                            + ", size=" + phongThiList.size());
+        }
 
-        sortedPhongThiList.sort(Comparator.comparingLong(PhongThi::getId));
-        sortedCanBoList.sort(Comparator.comparingLong(CanBo::getId));
-
-        int soPhongThiFull = sortedPhongThiList.size();
-        int soCanBoFull = sortedCanBoList.size();
+        int soPhongThiFull = phongThiList.size();
+        int soCanBoFull = canBoList.size();
         int S = getS(soCanBoFull, soPhongThiFull);
 
         if (S <= 0 || 2 * S > soCanBoFull) {
@@ -46,15 +55,16 @@ public class GenerateSchedule {
             throw new Exception("Khong the tao ca thi cho line=" + line);
         }
 
-        List<PhanCongGiamThi> result = new ArrayList<>();
+        List<PhanCongGiamThi> result = new ArrayList<>(count);
 
-        for (int i = 0; i < soPhongThiFull; i++) {
+        int endExclusive = offset + count;
+        for (int i = offset; i < endExclusive; i++) {
             int a = (i + line) % S;
             int b = S + (i + 2 * line) % S;
 
-            PhongThi phong = sortedPhongThiList.get(i);
-            CanBo giamThi1 = sortedCanBoList.get(a);
-            CanBo giamThi2 = sortedCanBoList.get(b);
+            PhongThi phong = phongThiList.get(i);
+            CanBo giamThi1 = canBoList.get(a);
+            CanBo giamThi2 = canBoList.get(b);
 
             result.add(new PhanCongGiamThi(
                     phong.getPhongThi(),
@@ -170,10 +180,7 @@ public class GenerateSchedule {
             return result;
         }
 
-        List<PhongThi> sortedPhongThiList = new ArrayList<>(phongThiList);
-        sortedPhongThiList.sort(Comparator.comparingLong(PhongThi::getId));
-
-        int total = sortedPhongThiList.size();
+        int total = phongThiList.size();
         int base = total / soKhoi;
         int extra = total % soKhoi;
         int index = 0;
@@ -188,7 +195,7 @@ public class GenerateSchedule {
             List<PhongThi> khoi = new ArrayList<>();
 
             for (int j = 0; j < size && index < total; j++) {
-                khoi.add(sortedPhongThiList.get(index++));
+                khoi.add(phongThiList.get(index++));
             }
 
             if (!khoi.isEmpty()) {

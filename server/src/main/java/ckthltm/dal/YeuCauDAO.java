@@ -8,7 +8,7 @@ import java.util.*;
 public class YeuCauDAO extends BaseDAO {
     public List<YeuCau> getAll() {
         List<YeuCau> list = new ArrayList<>();
-        String sql = "SELECT * FROM yeu_cau ORDER BY id";
+        String sql = "SELECT * FROM yeu_cau ORDER BY line, id";
         Connection conn = null;
         Statement stmt = null;
         ResultSet rs = null;
