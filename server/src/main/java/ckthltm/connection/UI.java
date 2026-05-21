@@ -13,6 +13,9 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 public class UI extends JFrame {
+    private static final int LEFT_WIDTH = 380;
+    private static final int RIGHT_WIDTH = 520;
+
     // ── Colors (same palette as client) ───────────
     private static final Color BG_MAIN = new Color(0xF4F7FB);
     private static final Color BG_CARD = new Color(0xFFFFFF);
@@ -48,6 +51,7 @@ public class UI extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(950, 700);
         setMinimumSize(new Dimension(850, 600));
+        setResizable(false);
         setLocationRelativeTo(null);
 
         JPanel root = new JPanel(new BorderLayout());
@@ -106,26 +110,20 @@ public class UI extends JFrame {
     }
 
     private JPanel buildCenter() {
-        JPanel center = new JPanel(new GridBagLayout());
+        JPanel center = new JPanel();
+        center.setLayout(new BoxLayout(center, BoxLayout.X_AXIS));
         center.setBackground(BG_MAIN);
         center.setBorder(new EmptyBorder(20, 24, 20, 24));
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.insets = new Insets(0, 0, 0, 14);
+        JPanel left = buildStatsPanel();
+        fixPanelWidth(left, LEFT_WIDTH);
 
-        // left stats
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 0.42;
-        gbc.weighty = 1.0;
-        center.add(buildStatsPanel(), gbc);
+        JPanel right = buildLogPanel();
+        fixPanelWidth(right, RIGHT_WIDTH);
 
-        // right log
-        gbc.gridx = 1;
-        gbc.weightx = 0.58;
-        gbc.insets = new Insets(0, 0, 0, 0);
-        center.add(buildLogPanel(), gbc);
+        center.add(left);
+        center.add(Box.createHorizontalStrut(14));
+        center.add(right);
 
         return center;
     }
@@ -137,7 +135,7 @@ public class UI extends JFrame {
 
         JPanel card = createCard();
         card.setLayout(new BorderLayout(0, 14));
-        card.add(sectionLabel("📊 Thông tin hệ thống"), BorderLayout.NORTH);
+        card.add(sectionLabel("Thông tin hệ thống"), BorderLayout.NORTH);
 
         JPanel rows = new JPanel(new GridLayout(3, 1, 0, 10));
         rows.setOpaque(false);
@@ -160,7 +158,7 @@ public class UI extends JFrame {
     private JPanel buildLogPanel() {
         JPanel panel = createCard();
         panel.setLayout(new BorderLayout(0, 10));
-        panel.add(sectionLabel("📋 Nhật ký hoạt động"), BorderLayout.NORTH);
+        panel.add(sectionLabel("Nhật ký hoạt động"), BorderLayout.NORTH);
 
         logArea = new JTextArea();
         logArea.setEditable(false);
@@ -226,6 +224,15 @@ public class UI extends JFrame {
         wrap.add(lbl, BorderLayout.NORTH);
         wrap.add(valueWrap, BorderLayout.CENTER);
         return wrap;
+    }
+
+    private void fixPanelWidth(JComponent component, int width) {
+        Dimension pref = component.getPreferredSize();
+        int preferredHeight = pref != null ? pref.height : 0;
+        component.setPreferredSize(new Dimension(width, preferredHeight));
+        component.setMinimumSize(new Dimension(width, 0));
+        component.setMaximumSize(new Dimension(width, Integer.MAX_VALUE));
+        component.setAlignmentY(Component.TOP_ALIGNMENT);
     }
 
     // ── Logging ───────────────────────────────────
