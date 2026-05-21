@@ -87,7 +87,7 @@ public class MessageListener extends Thread {
             System.out.println("[SERVER] Kết nối bị đóng từ phía đối diện (EOF).");
         } catch (IOException e) {
             System.err.println("[SERVER] Lỗi IO: " + e.getMessage());
-            e.printStackTrace();
+            // e.printStackTrace();
         }
     }
 }
