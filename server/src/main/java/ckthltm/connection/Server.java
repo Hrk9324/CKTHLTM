@@ -6,6 +6,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 
+import javax.swing.SwingUtilities;
+
 import ckthltm.interfaces.MessageCallback;
 import ckthltm.dal.*;
 import ckthltm.logic.*;
@@ -18,6 +20,20 @@ public class Server {
     private MessageSender messageSender = new MessageSender();
     private ServerSocket serverSocket;
     private Socket connectedSocket;
+    private UI ui;
+
+    private void refreshUiStats() {
+        if (ui == null) {
+            return;
+        }
+        try {
+            int canBoCount = new CanBoDAO().getAll().size();
+            int phongThiCount = new PhongThiDAO().getAll().size();
+            int caThiCount = new YeuCauDAO().getAll().size();
+            ui.setStats(canBoCount, phongThiCount, caThiCount);
+        } catch (Exception ignored) {
+        }
+    }
 
     private class ReceivedCallback implements MessageCallback {
 
@@ -148,6 +164,8 @@ public class Server {
 
                 // LƯU GIÁM SÁT VÀO DB
                 giamSatDAO.insertAllPhanCongGiamSat(phanCongGiamSatList);
+
+                refreshUiStats();
             } catch (Exception e) {
                 System.err.println("Error: " + e.getMessage());
             }
@@ -197,6 +215,8 @@ public class Server {
                     }
                     System.out.println("PhongThi: " + ptSuccess + "/" + ptSize + " records inserted.");
                     System.out.println("===> Done.");
+
+                    refreshUiStats();
                 } catch (Exception e) {
                     System.err.println("Error: " + e.getMessage());
                 }
@@ -207,11 +227,21 @@ public class Server {
 
     public void start(int port) {
         try {
+            try {
+                SwingUtilities.invokeAndWait(() -> {
+                    ui = new UI();
+                    ui.display();
+                });
+            } catch (Exception e) {
+                System.err.println("[SERVER] Cannot start Swing UI: " + e.getMessage());
+            }
+
+            refreshUiStats();
+
             this.serverSocket = new ServerSocket(port);
             System.out.println("Server start at port: " + port);
             connectedSocket = serverSocket.accept();
-            MessageListener messageListener = new MessageListener(connectedSocket, fileSavePath,
-                    new ReceivedCallback());
+            MessageListener messageListener = new MessageListener(connectedSocket, fileSavePath, new ReceivedCallback());
             messageListener.start();
         } catch (IOException e) {
             System.err.println(e);
