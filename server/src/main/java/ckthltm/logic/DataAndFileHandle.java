@@ -22,6 +22,8 @@ import ckthltm.models.result.PhanCongGiamThi;
 
 public class DataAndFileHandle {
 
+    private static final int MAX_GIAM_THI_PER_SHEET = 20;
+
     private static String buildPhanCongFileName(int caThi) {
         return "phan_cong_cathi_" + caThi + ".xlsx";
     }
@@ -39,86 +41,97 @@ public class DataAndFileHandle {
         String filePath = outputDir + File.separator + fileName;
 
         Workbook danhSachPhanCong = openOrCreateWorkbook(filePath);
-        removeSheetIfExists(danhSachPhanCong, "PhanCong");
 
-        Sheet sheet = danhSachPhanCong.createSheet("PhanCong");
+        removeAllSheets(danhSachPhanCong);
 
         int lastCol = 5; // 0..5
         int tableHeaderStartRow = 6;
         int dataStartRow = 8;
 
-        writeNationalHeader(
-                sheet,
-                danhSachPhanCong,
-                lastCol,
-                "DANH SÁCH PHÂN CÔNG GIÁM THỊ COI THI",
-                "Phiên: Ca " + caThi + "  -  Ngày: " + todayDdMmYyyy());
-
         Map<String, CanBo> canBoMap = buildCanBoMap(danhSachCanBo);
+
 
         // Khởi tạo các Style
         CellStyle headerStyle = createHeaderStyle(danhSachPhanCong);
         CellStyle centerStyle = createCenterStyle(danhSachPhanCong);
         CellStyle leftStyle = createLeftStyle(danhSachPhanCong);
 
-        // Tạo sẵn lưới ô cho Header (2 dòng, 0..5) để hiển thị viền đầy đủ khi merge
-        Row row0 = sheet.createRow(tableHeaderStartRow);
-        Row row1 = sheet.createRow(tableHeaderStartRow + 1);
-        for (int i = 0; i <= 5; i++) {
-            row0.createCell(i).setCellStyle(headerStyle);
-            row1.createCell(i).setCellStyle(headerStyle);
-        }
-
-        // Gộp ô (Merge cells)
-        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 0, 0));
-        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 1, 1));
-        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 2, 2));
-        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow, 3, 4));
-        sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 5, 5));
-
-        // Đặt giá trị cho Header
-        row0.getCell(0).setCellValue("STT");
-        row0.getCell(1).setCellValue("Mã GV");
-        row0.getCell(2).setCellValue("Họ và tên");
-        row0.getCell(3).setCellValue("Giám thị");
-        row0.getCell(5).setCellValue("Phòng thi");
-
-        row1.getCell(3).setCellValue("Giám thị 1");
-        row1.getCell(4).setCellValue("Giám thị 2");
-
-        int offset = dataStartRow;
+        int roomsPerSheet = Math.max(1, MAX_GIAM_THI_PER_SHEET / 2); // 2 giám thị / 1 phòng
+        int totalRooms = danhSachPhanCongGiamThi != null ? danhSachPhanCongGiamThi.size() : 0;
+        int totalPages = Math.max(1, (int) Math.ceil(totalRooms / (double) roomsPerSheet));
         int stt = 0;
 
-        for (int i = 0; i < danhSachPhanCongGiamThi.size(); ++i) {
-            PhanCongGiamThi phanCong = danhSachPhanCongGiamThi.get(i);
+        for (int page = 0; page < totalPages; page++) {
+            int startRoom = page * roomsPerSheet;
+            int endRoom = Math.min(totalRooms, startRoom + roomsPerSheet);
 
-            String phongThi = phanCong.getPhongThi();
+            Sheet sheet = danhSachPhanCong.createSheet("trang_" + (page + 1));
 
-            CanBo giamThi1 = canBoMap.get(phanCong.getMaGiamThi1());
-            CanBo giamThi2 = canBoMap.get(phanCong.getMaGiamThi2());
+            writeNationalHeader(
+                    sheet,
+                    danhSachPhanCong,
+                    lastCol,
+                    "DANH SÁCH PHÂN CÔNG GIÁM THỊ COI THI (Trang " + (page + 1) + "/" + totalPages + ")",
+                    "Phiên: Ca " + caThi + "  -  Ngày: " + todayDdMmYyyy());
 
-            // Giám thị 1
-            Row giamThi1Row = sheet.createRow(offset + i * 2);
-            createStyledCell(giamThi1Row, 0, String.valueOf(++stt), centerStyle);
-            createStyledCell(giamThi1Row, 1, phanCong.getMaGiamThi1(), centerStyle);
-            createStyledCell(giamThi1Row, 2, giamThi1 != null ? giamThi1.getHoTen() : "", leftStyle);
-            createStyledCell(giamThi1Row, 3, "X", centerStyle);
-            createStyledCell(giamThi1Row, 4, "", centerStyle);
-            createStyledCell(giamThi1Row, 5, phongThi, centerStyle);
+            // Tạo sẵn lưới ô cho Header (2 dòng, 0..5) để hiển thị viền đầy đủ khi merge
+            Row row0 = sheet.createRow(tableHeaderStartRow);
+            Row row1 = sheet.createRow(tableHeaderStartRow + 1);
+            for (int i = 0; i <= 5; i++) {
+                row0.createCell(i).setCellStyle(headerStyle);
+                row1.createCell(i).setCellStyle(headerStyle);
+            }
 
-            // Giám thị 2
-            Row giamThi2Row = sheet.createRow(offset + i * 2 + 1);
-            createStyledCell(giamThi2Row, 0, String.valueOf(++stt), centerStyle);
-            createStyledCell(giamThi2Row, 1, phanCong.getMaGiamThi2(), centerStyle);
-            createStyledCell(giamThi2Row, 2, giamThi2 != null ? giamThi2.getHoTen() : "", leftStyle);
-            createStyledCell(giamThi2Row, 3, "", centerStyle);
-            createStyledCell(giamThi2Row, 4, "X", centerStyle);
-            createStyledCell(giamThi2Row, 5, phongThi, centerStyle);
-        }
+            // Gộp ô (Merge cells)
+            sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 0, 0));
+            sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 1, 1));
+            sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 2, 2));
+            sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow, 3, 4));
+            sheet.addMergedRegion(new CellRangeAddress(tableHeaderStartRow, tableHeaderStartRow + 1, 5, 5));
 
-        // Tự động căn chỉnh độ rộng cột
-        for (int i = 0; i <= 5; i++) {
-            sheet.autoSizeColumn(i, true);
+            // Đặt giá trị cho Header
+            row0.getCell(0).setCellValue("STT");
+            row0.getCell(1).setCellValue("Mã GV");
+            row0.getCell(2).setCellValue("Họ và tên");
+            row0.getCell(3).setCellValue("Giám thị");
+            row0.getCell(5).setCellValue("Phòng thi");
+
+            row1.getCell(3).setCellValue("Giám thị 1");
+            row1.getCell(4).setCellValue("Giám thị 2");
+
+            int rowOffset = dataStartRow;
+
+            for (int roomIndex = startRoom; roomIndex < endRoom; roomIndex++) {
+                PhanCongGiamThi phanCong = danhSachPhanCongGiamThi.get(roomIndex);
+                int localIndex = roomIndex - startRoom;
+
+                String phongThi = phanCong.getPhongThi();
+                CanBo giamThi1 = canBoMap.get(phanCong.getMaGiamThi1());
+                CanBo giamThi2 = canBoMap.get(phanCong.getMaGiamThi2());
+
+                // Giám thị 1
+                Row giamThi1Row = sheet.createRow(rowOffset + localIndex * 2);
+                createStyledCell(giamThi1Row, 0, String.valueOf(++stt), centerStyle);
+                createStyledCell(giamThi1Row, 1, phanCong.getMaGiamThi1(), centerStyle);
+                createStyledCell(giamThi1Row, 2, giamThi1 != null ? giamThi1.getHoTen() : "", leftStyle);
+                createStyledCell(giamThi1Row, 3, "X", centerStyle);
+                createStyledCell(giamThi1Row, 4, "", centerStyle);
+                createStyledCell(giamThi1Row, 5, phongThi, centerStyle);
+
+                // Giám thị 2
+                Row giamThi2Row = sheet.createRow(rowOffset + localIndex * 2 + 1);
+                createStyledCell(giamThi2Row, 0, String.valueOf(++stt), centerStyle);
+                createStyledCell(giamThi2Row, 1, phanCong.getMaGiamThi2(), centerStyle);
+                createStyledCell(giamThi2Row, 2, giamThi2 != null ? giamThi2.getHoTen() : "", leftStyle);
+                createStyledCell(giamThi2Row, 3, "", centerStyle);
+                createStyledCell(giamThi2Row, 4, "X", centerStyle);
+                createStyledCell(giamThi2Row, 5, phongThi, centerStyle);
+            }
+
+            // Tự động căn chỉnh độ rộng cột
+            for (int i = 0; i <= 5; i++) {
+                sheet.autoSizeColumn(i, true);
+            }
         }
 
         saveWorkbook(danhSachPhanCong, filePath);
@@ -134,45 +147,54 @@ public class DataAndFileHandle {
         String filePath = outputDir + File.separator + fileName;
 
         Workbook danhSachPhanCong = openOrCreateWorkbook(filePath);
-        removeSheetIfExists(danhSachPhanCong, "GiamSat");
 
-        Sheet sheet = danhSachPhanCong.createSheet("GiamSat");
+        removeAllSheets(danhSachPhanCong);
 
         int lastCol = 3; // 0..3
         int tableHeaderRow = 6;
         int dataStartRow = 7;
 
-        writeNationalHeader(
-            sheet,
-            danhSachPhanCong,
-            lastCol,
-            "DANH SÁCH GIÁM SÁT HÀNH LANG",
-            "Phiên: Ca " + caThi + "  -  Ngày: " + todayDdMmYyyy());
-
         CellStyle headerStyle = createHeaderStyle(danhSachPhanCong);
         CellStyle centerStyle = createCenterStyle(danhSachPhanCong);
         CellStyle leftStyle = createLeftStyle(danhSachPhanCong);
 
-        Row row0 = sheet.createRow(tableHeaderRow);
-        String[] headers = { "STT", "Mã GV", "Họ và tên", "Phòng thi được giám sát" };
-        for (int i = 0; i < headers.length; i++) {
-            Cell cell = row0.createCell(i);
-            cell.setCellValue(headers[i]);
-            cell.setCellStyle(headerStyle);
-        }
-
-        int offset = dataStartRow;
+        int total = danhSachGiamSat != null ? danhSachGiamSat.size() : 0;
+        int totalPages = Math.max(1, (int) Math.ceil(total / (double) MAX_GIAM_THI_PER_SHEET));
         int stt = 0;
 
         if (danhSachGiamSat == null || danhSachGiamSat.isEmpty()) {
             System.out.println("Ca thi " + caThi + ": Không có cán bộ dư để xếp giám sát hành lang.");
-        } else {
-            for (int i = 0; i < danhSachGiamSat.size(); ++i) {
-                PhanCongGiamSat phanCong = danhSachGiamSat.get(i);
+        }
+
+        for (int page = 0; page < totalPages; page++) {
+            int start = page * MAX_GIAM_THI_PER_SHEET;
+            int end = Math.min(total, start + MAX_GIAM_THI_PER_SHEET);
+
+            Sheet sheet = danhSachPhanCong.createSheet("trang_" + (page + 1));
+
+            writeNationalHeader(
+                    sheet,
+                    danhSachPhanCong,
+                    lastCol,
+                    "DANH SÁCH GIÁM SÁT HÀNH LANG (Trang " + (page + 1) + "/" + totalPages + ")",
+                    "Phiên: Ca " + caThi + "  -  Ngày: " + todayDdMmYyyy());
+
+            Row row0 = sheet.createRow(tableHeaderRow);
+            String[] headers = { "STT", "Mã GV", "Họ và tên", "Phòng thi được giám sát" };
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = row0.createCell(i);
+                cell.setCellValue(headers[i]);
+                cell.setCellStyle(headerStyle);
+            }
+
+            int offset = dataStartRow;
+
+            for (int idx = start; idx < end; idx++) {
+                int localIndex = idx - start;
+                PhanCongGiamSat phanCong = danhSachGiamSat.get(idx);
                 CanBo giamSat = phanCong.getCanBo();
 
-                Row row = sheet.createRow(offset + i);
-
+                Row row = sheet.createRow(offset + localIndex);
                 createStyledCell(row, 0, String.valueOf(++stt), centerStyle);
 
                 if (giamSat == null) {
@@ -186,11 +208,11 @@ public class DataAndFileHandle {
                 createStyledCell(row, 2, giamSat.getHoTen(), leftStyle);
                 createStyledCell(row, 3, formatPhongGiamSat(phanCong.getPhongThiList()), centerStyle);
             }
-        }
 
-        // Tự động căn chỉnh độ rộng cột
-        for (int i = 0; i < headers.length; i++) {
-            sheet.autoSizeColumn(i, true);
+            // Tự động căn chỉnh độ rộng cột
+            for (int i = 0; i < headers.length; i++) {
+                sheet.autoSizeColumn(i, true);
+            }
         }
 
         saveWorkbook(danhSachPhanCong, filePath);
@@ -213,11 +235,9 @@ public class DataAndFileHandle {
         }
     }
 
-    private static void removeSheetIfExists(Workbook workbook, String sheetName) {
-        int sheetIndex = workbook.getSheetIndex(sheetName);
-
-        if (sheetIndex >= 0) {
-            workbook.removeSheetAt(sheetIndex);
+    private static void removeAllSheets(Workbook workbook) {
+        while (workbook.getNumberOfSheets() > 0) {
+            workbook.removeSheetAt(0);
         }
     }
 
