@@ -194,7 +194,6 @@ public class DataAndFileHandle {
     private static void saveWorkbook(Workbook workbook, String filePath) {
         try (FileOutputStream fos = new FileOutputStream(filePath)) {
             workbook.write(fos);
-            System.out.println("Đã lưu file tại: " + new File(filePath).getAbsolutePath());
         } catch (Exception e) {
             System.err.println("Lỗi khi lưu file: " + e.getMessage());
         } finally {

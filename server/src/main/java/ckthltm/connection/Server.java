@@ -48,8 +48,8 @@ public class Server {
 
                 System.out.println("[SERVER] Tham số: n=" + n + ", m=" + m + ", canBoGiamSat=" + soCanBoGiamSat);
 
-                if (soCanBoGiamSat < 0) {
-                    throw new Exception("Khong du can bo: can it nhat 2 can bo cho moi phong thi");
+                if (soCanBoGiamSat <= 0) {
+                    throw new Exception("Can it nhat 1 can bo giam sat");
                 }
 
                 // LẤY DỮ LIỆU TỪ DB
