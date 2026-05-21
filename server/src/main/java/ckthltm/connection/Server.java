@@ -110,14 +110,17 @@ public class Server {
                 System.out.println("[SERVER] Tham số: n=" + n + ", m=" + m + ", canBoGiamSat=" + soCanBoGiamSat);
 
                 if (soCanBoGiamSat <= 0) {
+                    messageSender.sendMessage(connectedSocket, "Yêu cầu không hợp lệ: số cán bộ giám sát phải lớn hơn 0.");
                     throw new Exception("Can it nhat 1 can bo giam sat");
                 }
 
                 if (m > canBoFullList.size()) {
+                    messageSender.sendMessage(connectedSocket, "Yêu cầu không hợp lệ: số cán bộ yêu cầu lớn hơn số cán bộ trong hệ thống.");
                     throw new Exception("So can bo yeu cau lon hon so can bo trong he thong");
                 }
 
                 if (n > phongThiFullList.size()) {
+                    messageSender.sendMessage(connectedSocket, "Yêu cầu không hợp lệ: số phòng thi yêu cầu lớn hơn số phòng thi trong hệ thống.");
                     throw new Exception("So phong thi yeu cau lon hon so phong thi trong he thong");
                 }
 
@@ -127,6 +130,7 @@ public class Server {
                 int sucChuaMotLine = Math.min(S, phongThiFullList.size());
 
                 if (n > sucChuaMotLine) {
+                    messageSender.sendMessage(connectedSocket, "Yêu cầu không hợp lệ: số phòng thi yêu cầu lớn hơn sức chứa của một line.");
                     throw new Exception("So phong thi n vuot qua suc chua mot line. n=" + n + ", S=" + S);
                 }
 
@@ -162,6 +166,7 @@ public class Server {
                 }
 
                 if (line >= Lmax) {
+                    messageSender.sendMessage(connectedSocket, "Yêu cầu không hợp lệ: không còn line hợp lệ để tạo ca thi mới.");
                     throw new Exception("Khong con line hop le de tao ca thi moi");
                 }
 
