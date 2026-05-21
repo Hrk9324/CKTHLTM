@@ -4,15 +4,23 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.SwingUtilities;
 
+import ckthltm.dal.CanBoDAO;
+import ckthltm.dal.GiamSatDAO;
+import ckthltm.dal.PhongThiDAO;
+import ckthltm.dal.YeuCauDAO;
 import ckthltm.interfaces.MessageCallback;
-import ckthltm.dal.*;
-import ckthltm.logic.*;
-import ckthltm.models.*;
-import ckthltm.models.result.*;
+import ckthltm.logic.DataAndFileHandle;
+import ckthltm.logic.GenerateSchedule;
+import ckthltm.models.CanBo;
+import ckthltm.models.PhongThi;
+import ckthltm.models.YeuCau;
+import ckthltm.models.result.PhanCongGiamSat;
+import ckthltm.models.result.PhanCongGiamThi;
 
 public class Server {
     private final String fileSavePath = "downloads";
@@ -22,15 +30,31 @@ public class Server {
     private Socket connectedSocket;
     private UI ui;
 
+    // In-memory data caches
+    private List<CanBo> canBoFullList = new ArrayList<>();
+    private List<PhongThi> phongThiFullList = new ArrayList<>();
+    private List<YeuCau> yeuCauFullList = new ArrayList<>();
+
+    private void loadDataToMemory() {
+        try {
+            System.out.println("[SERVER] Bắt đầu tải dữ liệu từ DB vào bộ nhớ...");
+            canBoFullList = new CanBoDAO().getAll();
+            phongThiFullList = new PhongThiDAO().getAll();
+            yeuCauFullList = new YeuCauDAO().getAll();
+            System.out.println("[SERVER] Hoàn tất tải dữ liệu: " + canBoFullList.size() + " cán bộ, "
+                    + phongThiFullList.size() + " phòng thi, " + yeuCauFullList.size() + " yêu cầu.");
+        } catch (Exception e) {
+            System.err.println("[SERVER] Lỗi khi tải dữ liệu từ DB: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     private void refreshUiStats() {
         if (ui == null) {
             return;
         }
         try {
-            int canBoCount = new CanBoDAO().getAll().size();
-            int phongThiCount = new PhongThiDAO().getAll().size();
-            int caThiCount = new YeuCauDAO().getAll().size();
-            ui.setStats(canBoCount, phongThiCount, caThiCount);
+            ui.setStats(canBoFullList.size(), phongThiFullList.size(), yeuCauFullList.size());
         } catch (Exception ignored) {
         }
     }
@@ -52,14 +76,7 @@ public class Server {
                     throw new Exception("Can it nhat 1 can bo giam sat");
                 }
 
-                // LẤY DỮ LIỆU TỪ DB
-                CanBoDAO canBoDAO = new CanBoDAO();
-                List<CanBo> canBoFullList = canBoDAO.getAll();
-                PhongThiDAO phongThiDAO = new PhongThiDAO();
-                List<PhongThi> phongThiFullList = phongThiDAO.getAll();
-                YeuCauDAO yeuCauDAO = new YeuCauDAO();
-                List<YeuCau> yeuCauFullList = yeuCauDAO.getAll();
-
+                // SỬ DỤNG DỮ LIỆU TỪ BỘ NHỚ
                 if (m > canBoFullList.size()) {
                     throw new Exception("So can bo yeu cau lon hon so can bo trong he thong");
                 }
@@ -158,8 +175,11 @@ public class Server {
 
                 // LƯU YÊU CẦU VÀO DB 
                 YeuCau newYeuCau = new YeuCau(m, n, line);
+                YeuCauDAO yeuCauDAO = new YeuCauDAO();
                 if (yeuCauDAO.insert(newYeuCau)) {
                     System.out.println("[SERVER] Đã lưu yêu cầu vào database.");
+                    // Cập nhật dữ liệu trong bộ nhớ
+                    yeuCauFullList.add(newYeuCau);
                 } else {
                     System.err.println("[SERVER] Lỗi khi lưu yêu cầu vào database.");
                 }
@@ -187,6 +207,11 @@ public class Server {
                     new YeuCauDAO().deleteAll();
                     new GiamSatDAO().deleteAll();
 
+                    // Xóa dữ liệu cũ trong bộ nhớ
+                    canBoFullList.clear();
+                    phongThiFullList.clear();
+                    yeuCauFullList.clear();
+
                     // Xử lý Cán Bộ
                     List<CanBo> danhSachCanBo = DataAndFileHandle.readCanBoCoiThi(savedPath);
                     int cbSize = (danhSachCanBo != null) ? danhSachCanBo.size() : 0;
@@ -194,8 +219,10 @@ public class Server {
 
                     if (cbSize > 0) {
                         for (CanBo cb : danhSachCanBo) {
-                            if (canBoDAO.insert(cb))
+                            if (canBoDAO.insert(cb)) {
                                 cbSuccess++;
+                                canBoFullList.add(cb); // Cập nhật bộ nhớ
+                            }
                         }
                     }
                     System.out.println("CanBo: " + cbSuccess + "/" + cbSize + " records inserted.");
@@ -207,8 +234,10 @@ public class Server {
 
                     if (ptSize > 0) {
                         for (PhongThi pt : danhSachPhongThi) {
-                            if (phongThiDAO.insert(pt))
+                            if (phongThiDAO.insert(pt)) {
                                 ptSuccess++;
+                                phongThiFullList.add(pt); // Cập nhật bộ nhớ
+                            }
                         }
                     }
                     System.out.println("PhongThi: " + ptSuccess + "/" + ptSize + " records inserted.");
@@ -233,6 +262,9 @@ public class Server {
             } catch (Exception e) {
                 System.err.println("[SERVER] Cannot start Swing UI: " + e.getMessage());
             }
+
+            // Tải dữ liệu từ DB vào bộ nhớ lần đầu
+            loadDataToMemory();
 
             refreshUiStats();
 

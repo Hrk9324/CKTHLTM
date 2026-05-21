@@ -1,6 +1,10 @@
 package ckthltm.dal;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 
 public class BaseDAO {
     protected static final String URL = "jdbc:mysql://localhost:3306/quan_ly_phong_thi";
